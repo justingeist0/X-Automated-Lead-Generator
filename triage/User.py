@@ -14,6 +14,26 @@ class User:
         self.last_dm_sent = last_dm_sent if last_dm_sent else None
         self.is_scraped = is_scraped
 
+    @classmethod
+    def from_db_row(cls, row):
+        """
+        Class method to create a User object from a database row.
+        The row must match the columns returned by the SQLite query.
+        """
+        return cls(
+            username=row[0],
+            name=row[1],
+            bio=row[2],
+            followers=row[3],
+            following=row[4],
+            is_verified=row[5],
+            sourced_from=row[6],
+            date_created=row[7],
+            total_dms_sent=row[8],
+            last_dm_sent=row[9],
+            is_scraped=bool(row[10])
+        )
+
     def __str__(self):
         return (
             f"Name: {self.name} "

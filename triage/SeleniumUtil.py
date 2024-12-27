@@ -4,6 +4,7 @@ import time
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 
+from config import Config
 from triage.DMsToSend import getDMMessageSent
 from triage.User import User
 import json
@@ -18,11 +19,21 @@ def epoch_to_datetime(epoch_time):
 
 class XActions:
 
-    def __init__(self):
-        print(epoch_to_datetime(1768523449), "text")
-        self.driver = webdriver.Chrome()
+    def __init__(self, config: Config):
+        self._driver = None
+        self.multi_message_mode = False
+        self.config = config
 
-    def login(self, private_username, private_password):
+    @property
+    def driver(self):
+        if self._driver is None:
+            print("Initializing the driver...")
+            options = webdriver.ChromeOptions()
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            self._driver = webdriver.Chrome(options=options)
+        return self._driver
+
+    def login(self):
         self.driver.get('https://x.com')
         should_use_cookies = True
         current_time = datetime.now().timestamp()
@@ -40,7 +51,8 @@ class XActions:
                             break
         except Exception as e:
             # Just means we don't have a cookies.txt file yet.
-            print("No existing cookies file... Expect to receive an Unexpected log in notification" ,e)
+            print("No existing cookies file... Expect to receive an Unexpected log in notification", e)
+            should_use_cookies = False
             pass
 
         if should_use_cookies:
@@ -55,27 +67,18 @@ class XActions:
                 self.driver.add_cookie(cookie)
 
             self.driver.refresh()
-            return
-
+            return True
 
         self.driver.get('https://x.com/login')
         # Log in and save cookies so we don't have to log in again next time and you don't get spammed in login
         # attempt notifications.
-        time.sleep(2)
-
-        username = find_x_path(self.driver, "//*[@id=\"layers\"]/div[2]/div/div/div/div/div/div[2]/div[2]/div/div/div[2]/div[2]/div/div/div/div[4]/label/div/div[2]/div/input")
-        username.send_keys(private_username + Keys.ENTER)
-
-        time.sleep(2)
-
-        password = find_x_path(self.driver, "//*[@id=\"layers\"]/div[2]/div/div/div/div/div/div[2]/div[2]/div/div/div[2]/div[2]/div[1]/div/div/div[3]/div/label/div/div[2]/div[1]/input")
-        password.send_keys(private_password + Keys.ENTER)
-        time.sleep(5)
+        time.sleep(60)
         cookies = self.driver.get_cookies()
         # Save cookies to a text file in JSON format for ease of use when loading
         with open('cookies.txt', 'w') as file:
             json.dump(cookies, file)
         print("Cookies saved to file.")
+        return 'auth_token' in cookies
 
     def scrape_user_name(self, name):
         self.driver.get(f"https://x.com/{name}/verified_followers")
@@ -120,7 +123,7 @@ class XActions:
     def dm_user(self, user):
         self.driver.get("https://x.com/" + str(user.username.replace("@", "")))
 
-        time.sleep(random.randrange(3, 30))
+        time.sleep(random.randrange(3, 8))
         try:
             # Locate the first <a> element with "following" in the href
             following_link = self.driver.find_element(By.CSS_SELECTOR, "a[href*='following']")
@@ -168,16 +171,31 @@ class XActions:
                 name = str(user.name.split(' ')[0])
             except Exception as e:
                 pass
-            message = getDMMessageSent(name)
+            message = self.config.dm_template.replace("{name}", name).split('\n')
+            textbox_div = self.driver.find_element(By.CSS_SELECTOR, "div[role='textbox']")
             for m in message:
                 textbox_div = self.driver.find_element(By.CSS_SELECTOR, "div[role='textbox']")
-                textbox_div.send_keys(m + Keys.ENTER)
-                time.sleep(random.randrange(2, 10))
+                if m == '':
+                    textbox_div.send_keys(Keys.SHIFT + Keys.ENTER)
+                    time.sleep(1)
+                else:
+                    textbox_div.send_keys(m)
+                    textbox_div.send_keys(Keys.SHIFT + Keys.ENTER)
+                    time.sleep(1)
+            textbox_div.send_keys(Keys.ENTER)
+            time.sleep(random.randrange(5, 10))
         except Exception as e:
             print("Could not find or interact with the textbox div:", str(e))
             return False
 
         return True
+
+    def off(self):
+        try:
+            self.driver.close()
+        except Exception as e:
+            print("Error closing driver:", str(e))
+        self._driver = None
 
 
 def convert_following_text_to_int(text: str):

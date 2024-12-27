@@ -1,18 +1,18 @@
+import datetime
 import sqlite3
 from datetime import date
 
+from config import Config
 from triage.User import User
 
 
 class Repository:
 
-    def __init__(self, scraping_queue: [str], keywords: [str]):
+    def __init__(self, config: Config):
         self.messages_sent_today = 0
         self.db_path = "./prospects.db"
         self.create_user_table()
-        self.scraping_queue = scraping_queue
-        self.keywords = keywords
-        self.create_user_table()
+        self.config = config
 
     def create_user_table(self):
         conn = sqlite3.connect(self.db_path)
@@ -132,9 +132,9 @@ class Repository:
         conn.close()
 
     def get_next_user_to_scrape(self):
-        if len(self.scraping_queue) > 0:
+        if len(self.config.manual_queue) > 0:
             return self.scraping_queue.pop()
-        return self.find_first_unscraped_user()
+        return self.find_next_user_to_scrape()
 
     def should_dm_user(self, user: User):
         # See if user is in database already based on username.
@@ -149,18 +149,14 @@ class Repository:
             print("DM Sent already or can't sent DM", user)
             return False
 
-        if len(self.keywords) == 0:
+        if len(self.config.keywords) == 0:
             return True
 
         # Check bio, username, and display name for keywords.
-        for keyword in self.keywords:
+        for keyword in self.config.keywords:
             if user.check_for_keyword(keyword):
-                print(keyword, "Let's dm", user)
-                break
-        else:
-            return False
-
-        return True
+                return True
+        return False
 
     def on_user_dm_result(self, can_message, user):
         if can_message:
@@ -170,16 +166,16 @@ class Repository:
             user.last_dm_sent = -1
         self.update_user(user)
 
-    def find_first_unscraped_user(self):
+    def find_next_user_to_scrape(self):
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
 
         # Build the SQL WHERE clause for keywords dynamically
         keyword_conditions = " OR ".join(
-            ["LOWER(bio) LIKE ? OR LOWER(username) LIKE ?" for _ in self.keywords]
+            ["LOWER(bio) LIKE ? OR LOWER(username) LIKE ?" for _ in self.config.keywords]
         )
         params = []
-        for keyword in self.keywords:
+        for keyword in self.config.keywords:
             params.append(f"%{keyword}%")  # For bio
             params.append(f"%{keyword}%")  # For username
 
@@ -209,3 +205,26 @@ class Repository:
             user = User(username=next_user_to_scrape)
         user.is_scraped = True
         self.update_user(user)
+
+    def get_user_data_for_date(self, date):
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute('''
+        SELECT username, name, bio, followers, following, is_verified, sourced_from, date_created, total_dms_sent, last_dm_sent, is_scraped
+        FROM users
+        WHERE last_dm_sent = ?
+        ''', (date,))
+        users = c.fetchall()
+        conn.close()
+        return users
+
+    def get_analytics_data(self, start_date, end_date):
+        # Mock data for testing
+        # Returns dates between start_date and end_date with dummy data
+        mock_data = []
+        current_date = start_date
+        while current_date <= end_date:
+            users_from_date = self.get_user_data_for_date(current_date)
+            mock_data.append((current_date.strftime("%b %d"), len(users_from_date), 50, 20, 30, 5))
+            current_date += datetime.timedelta(days=1)
+        return mock_data[::-1]
