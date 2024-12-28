@@ -26,8 +26,6 @@ class GUI:
         self.root = tk.Tk()
         self.root.title("Laplead.com - X Automated Lead Generator")
 
-
-
         # Main frame
         self.main_frame = ttk.Frame(self.root, padding="10")
         self.main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
@@ -88,30 +86,6 @@ class GUI:
         self.username_entry = ttk.Entry(self.main_frame, textvariable=self.username_var, width=40)
         self.username_entry.grid(row=8, column=0, pady=5, columnspan=2, sticky=(tk.W, tk.E))
 
-        # # Create a container frame for the buttons
-        # self.sort_container = ttk.Frame(self.main_frame)
-        # self.sort_container.grid(row=7, column=0, columnspan=2, pady=(10, 0), sticky=tk.W + tk.E)
-        #
-        # # Add message sort buttons inside the container
-        # message_sorts = ["Recently Sent", "Not Responded", "Responded", "Interested", "Not Interested", "Sales"]
-        # self.sort_buttons = []
-        #
-        # for idx, m in enumerate(message_sorts):
-        #     button = tk.Button(self.sort_container, text=m, command=lambda s=m: self.on_message_sort_change(s), background='light blue')  # Fixed width ~ 50px
-        #     button.grid(row=0, column=idx, padx=2, pady=2)  # Buttons arranged left to right
-        #     self.sort_buttons.append(button)
-        #
-        # # Messages table
-        # self.messages_frame = ttk.LabelFrame(self.main_frame, text="Messages")
-        # self.messages_frame.grid(row=8, column=0, pady=10, sticky=tk.W+tk.E, columnspan=5)
-        #
-        # message_columns = ("Date", "Username", "Message Inbox")
-        # self.messages_tree = ttk.Treeview(self.messages_frame, columns=message_columns, show='headings', height=7)
-        # for col in message_columns:
-        #     self.messages_tree.heading(col, text=col)
-        #     self.messages_tree.column(col, width=100)
-        # self.populate_messages_table()
-        #
         # Analytics table
         self.analytics_frame = ttk.LabelFrame(self.main_frame, text="Total Daily DMs Sent")
         self.analytics_frame.grid(row=9, column=0, pady=10, sticky=tk.W+tk.E, columnspan=2)
@@ -129,7 +103,21 @@ class GUI:
         self.main_frame.columnconfigure(0, weight=1)
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+        # Ensure the window renders correctly on macOS
+        self.root.after(100, self.ensure_visibility)
+
         self.root.mainloop()
+
+
+    def ensure_visibility(self):
+        # macOS sometimes needs a slight delay before widgets are displayed
+        self.root.lift()
+        self.root.attributes('-topmost', True)
+        self.root.after(100, lambda: self.root.attributes('-topmost', False))
+
+    def on_closing(self):
+        self.root.destroy()
 
     def populate_analytics_table(self):
         # Get today's date
@@ -142,7 +130,6 @@ class GUI:
         data = self.repo.get_analytics_data(start_date, today)
 
         # Expected format of `data`: list of tuples [("Date", dms_sent, responded, interested, not_interested, sales)]
-
         # Clear any existing rows in the analytics_tree
         for row in self.analytics_tree.get_children():
             self.analytics_tree.delete(row)
@@ -152,9 +139,6 @@ class GUI:
         for row in data:
             self.analytics_tree.insert("", tk.END, values=row)
             self.analytics_tree.pack(expand=True, fill='both')
-
-    def on_closing(self):
-        self.root.destroy()
 
     def update_status(self, new_status, disable=False):
         self.status_label.config(text=f"Status: {new_status}")
