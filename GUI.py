@@ -54,7 +54,7 @@ class GUI:
         self.save_dm_button.grid(row=3, column=1, pady=(20, 10), sticky="e")
 
         # DM Template Text Box
-        self.message_text = tk.Text(self.main_frame, height=5, width=50, wrap="word", font=("Arial", 12))
+        self.message_text = tk.Text(self.main_frame, height=6, width=50, wrap="word", font=("Arial", 12))
         self.message_text.grid(row=4, column=0, pady=(0, 5), columnspan=2, sticky=(tk.W, tk.E))
         self.message_text.insert("1.0", self.config.dm_template)
         self.message_text.edit_modified(False)
@@ -62,11 +62,11 @@ class GUI:
 
         # Keyword input label
         self.keyword_label = ttk.Label(self.main_frame, text="Enter Keywords, Separated by Commas:")
-        self.keyword_label.grid(row=5, column=0, pady=(20, 10), sticky=tk.W)
+        self.keyword_label.grid(row=5, column=0, pady=(20, 0), sticky=tk.W)
 
         # Keyword save
         self.save_keywords_button = ttk.Button(self.main_frame, text="Save Keywords", command=self.save_keywords, state=tk.DISABLED)
-        self.save_keywords_button.grid(row=5, column=1, pady=(20, 10), sticky="e")
+        self.save_keywords_button.grid(row=5, column=1, pady=(20, 0), sticky="e")
 
         # Keyword variable and trace
         self.keyword_var = tk.StringVar(value=self.config.keywords_str())
@@ -74,36 +74,50 @@ class GUI:
         self.keyword_entry = ttk.Entry(self.main_frame, textvariable=self.keyword_var, width=40)
         self.keyword_entry.grid(row=6, column=0, pady=5, columnspan=2, sticky=(tk.W, tk.E))
 
-        # Create a container frame for the buttons
-        self.sort_container = ttk.Frame(self.main_frame)
-        self.sort_container.grid(row=7, column=0, columnspan=2, pady=(10, 0), sticky=tk.W + tk.E)
+        # Username input label
+        self.username_label = ttk.Label(self.main_frame, text="Enter Usernames, Separated by Commas:")
+        self.username_label.grid(row=7, column=0, pady=(20, 0), sticky=tk.W)
 
-        # Add message sort buttons inside the container
-        message_sorts = ["Recently Sent", "Not Responded", "Responded", "Interested", "Not Interested", "Sales"]
-        self.sort_buttons = []
+        # Username save
+        self.save_username_button = ttk.Button(self.main_frame, text="Update Usernames in Queue", command=self.save_usernames, state=tk.DISABLED)
+        self.save_username_button.grid(row=7, column=1, pady=(20, 0), sticky="e")
 
-        for idx, m in enumerate(message_sorts):
-            button = tk.Button(self.sort_container, text=m, command=lambda s=m: self.on_message_sort_change(s), background='light blue')  # Fixed width ~ 50px
-            button.grid(row=0, column=idx, padx=2, pady=2)  # Buttons arranged left to right
-            self.sort_buttons.append(button)
+        # Username variable and trace
+        self.username_var = tk.StringVar(value=self.config.manual_queue_str())
+        self.username_var.trace_add("write", self.on_username_keyword_change)
+        self.username_entry = ttk.Entry(self.main_frame, textvariable=self.username_var, width=40)
+        self.username_entry.grid(row=8, column=0, pady=5, columnspan=2, sticky=(tk.W, tk.E))
 
-        # Messages table
-        self.messages_frame = ttk.LabelFrame(self.main_frame, text="Messages")
-        self.messages_frame.grid(row=8, column=0, pady=10, sticky=tk.W+tk.E, columnspan=5)
-
-        message_columns = ("Date", "Username", "Message Inbox")
-        self.messages_tree = ttk.Treeview(self.messages_frame, columns=message_columns, show='headings', height=7)
-        for col in message_columns:
-            self.messages_tree.heading(col, text=col)
-            self.messages_tree.column(col, width=100)
-        self.populate_messages_table()
-
+        # # Create a container frame for the buttons
+        # self.sort_container = ttk.Frame(self.main_frame)
+        # self.sort_container.grid(row=7, column=0, columnspan=2, pady=(10, 0), sticky=tk.W + tk.E)
+        #
+        # # Add message sort buttons inside the container
+        # message_sorts = ["Recently Sent", "Not Responded", "Responded", "Interested", "Not Interested", "Sales"]
+        # self.sort_buttons = []
+        #
+        # for idx, m in enumerate(message_sorts):
+        #     button = tk.Button(self.sort_container, text=m, command=lambda s=m: self.on_message_sort_change(s), background='light blue')  # Fixed width ~ 50px
+        #     button.grid(row=0, column=idx, padx=2, pady=2)  # Buttons arranged left to right
+        #     self.sort_buttons.append(button)
+        #
+        # # Messages table
+        # self.messages_frame = ttk.LabelFrame(self.main_frame, text="Messages")
+        # self.messages_frame.grid(row=8, column=0, pady=10, sticky=tk.W+tk.E, columnspan=5)
+        #
+        # message_columns = ("Date", "Username", "Message Inbox")
+        # self.messages_tree = ttk.Treeview(self.messages_frame, columns=message_columns, show='headings', height=7)
+        # for col in message_columns:
+        #     self.messages_tree.heading(col, text=col)
+        #     self.messages_tree.column(col, width=100)
+        # self.populate_messages_table()
+        #
         # Analytics table
-        self.analytics_frame = ttk.LabelFrame(self.main_frame, text="Analytics")
+        self.analytics_frame = ttk.LabelFrame(self.main_frame, text="Total Daily DMs Sent")
         self.analytics_frame.grid(row=9, column=0, pady=10, sticky=tk.W+tk.E, columnspan=2)
 
-        analytics_columns = ("Date", "DMs Sent", "Responded", "Interested", "Not Interested", "Sales")
-        self.analytics_tree = ttk.Treeview(self.analytics_frame, columns=analytics_columns, show='headings', height=7)
+        analytics_columns = ("Date", "DMs Sent")
+        self.analytics_tree = ttk.Treeview(self.analytics_frame, columns=analytics_columns, show='headings', height=3)
         for col in analytics_columns:
             self.analytics_tree.heading(col, text=col)
             self.analytics_tree.column(col, width=100)
@@ -195,6 +209,8 @@ class GUI:
                     can_message = self.actions.dm_user(user)
                     self.repo.on_user_dm_result(can_message, user)
                     self.update_status(f"Sent {self.repo.messages_sent_today} DMs Today")
+                    if can_message:
+                        self.populate_analytics_table()
 
         self.actions.off()
         self.update_status("Off")
@@ -203,11 +219,21 @@ class GUI:
         keywords = self.keyword_var.get()
         self.save_keywords_button.config(state=tk.NORMAL if keywords != self.config.keywords_str() else tk.DISABLED)
 
+    def on_username_keyword_change(self, text1, text2, text3):
+        username = self.username_var.get()
+        self.save_username_button.config(state=tk.NORMAL if username != self.config.manual_queue_str() else tk.DISABLED)
+
     def save_keywords(self):
         keywords = self.keyword_var.get()
         self.config.save_keywords(keywords)
         messagebox.showinfo("Success", "Saved keywords. " + str(self.config.keywords))
         self.save_keywords_button.config(state=tk.DISABLED)
+
+    def save_usernames(self):
+        username = self.username_var.get()
+        self.config.save_manual_queue(username)
+        messagebox.showinfo("Success", "Saved usernames to queue. " + str(self.config.manual_queue))
+        self.save_username_button.config(state=tk.DISABLED)
 
     def on_dm_change(self, event=None):
         """

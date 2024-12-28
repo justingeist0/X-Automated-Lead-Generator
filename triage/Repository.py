@@ -133,7 +133,7 @@ class Repository:
 
     def get_next_user_to_scrape(self):
         if len(self.config.manual_queue) > 0:
-            return self.scraping_queue.pop()
+            return self.config.manual_queue.pop()
         return self.find_next_user_to_scrape()
 
     def should_dm_user(self, user: User):
@@ -225,6 +225,6 @@ class Repository:
         current_date = start_date
         while current_date <= end_date:
             users_from_date = self.get_user_data_for_date(current_date)
-            mock_data.append((current_date.strftime("%b %d"), len(users_from_date), 50, 20, 30, 5))
+            mock_data.append((current_date.strftime("%b %d"), len(users_from_date)))
             current_date += datetime.timedelta(days=1)
         return mock_data[::-1]
