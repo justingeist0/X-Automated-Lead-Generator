@@ -52,11 +52,11 @@ class GUI:
         self.save_dm_button.grid(row=3, column=1, pady=(20, 10), sticky="e")
 
         # DM Template Text Box
-        self.message_text = tk.Text(self.main_frame, height=6, width=50, wrap="word", font=("Arial", 12))
-        self.message_text.grid(row=4, column=0, pady=(0, 5), columnspan=2, sticky=(tk.W, tk.E))
-        self.message_text.insert("1.0", self.config.dm_template)
-        self.message_text.edit_modified(False)
-        self.message_text.bind("<<Modified>>", self.on_dm_change)
+        self.dm_template_input = tk.Text(self.main_frame, height=6, width=50, wrap="word", font=("Arial", 12))
+        self.dm_template_input.grid(row=4, column=0, pady=(0, 5), columnspan=2, sticky=(tk.W, tk.E))
+        self.dm_template_input.insert("1.0", self.config.dm_template)
+        self.dm_template_input.edit_modified(False)
+        self.dm_template_input.bind("<<Modified>>", self.on_dm_change)
 
         # Keyword input label
         self.keyword_label = ttk.Label(self.main_frame, text="Enter Keywords, Separated by Commas:")
@@ -225,18 +225,18 @@ class GUI:
         This function is triggered by the <<Modified>> event.
         """
         # Ensure the event is responding to real changes
-        if self.message_text.edit_modified():
+        if self.dm_template_input.edit_modified():
             # Get current text from the text box
-            dm_template = self.message_text.get("1.0", tk.END).strip()
+            dm_template = self.dm_template_input.get("1.0", tk.END).strip()
 
             # Enable or disable the "Save Template" button based on changes
             self.save_dm_button.config(state=tk.NORMAL if dm_template != self.config.dm_template else tk.DISABLED)
 
             # Reset the "modified" flag
-            self.message_text.edit_modified(False)
+            self.dm_template_input.edit_modified(False)
 
     def save_dm_template(self):
-        dm_template = self.message_text.get("1.0", tk.END).strip()
+        dm_template = self.dm_template_input.get("1.0", tk.END).strip()
         dm_template = filter_bmp(dm_template)
         self.config.save_dm_template(dm_template)
         messagebox.showinfo("Success", "New DM Template saved. " + self.config.dm_template)

@@ -70,7 +70,7 @@ class Config:
             json.dump({
                 "dm_template": self.dm_template,
                 "keywords": self.keywords,
-                "manual_queue": manual_queue
+                "manual_queue": self.manual_queue
             }, file)
 
     def keywords_str(self):
