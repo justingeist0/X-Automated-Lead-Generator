@@ -141,7 +141,7 @@ class LeadGeneratorApp(App):
         main_layout.add_widget(self.username_input)
 
         self.save_usernames_button = Button(
-            text="Update Usernames in Queue",
+            text="Add Usernames to Queue",
             size_hint=(1, 0.1),
             on_press=self.save_usernames,
             disabled = True

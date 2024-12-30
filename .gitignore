@@ -1,4 +1,6 @@
 venv
 cookies.txt
 prospects.db
+build/
+dist/
 

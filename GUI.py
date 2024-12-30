@@ -3,6 +3,8 @@ import threading
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+from pygments.styles.dracula import background
+
 from config import Config
 from triage.Repository import Repository
 from triage.SeleniumUtil import XActions
@@ -24,13 +26,11 @@ class GUI:
 
         # Main window
         self.root = tk.Tk()
-        self.root.title("Laplead.com - X Automated Lead Generator")
-
-        # Main frame
+        self.root.title("Laplead.com - X Automated Lead Generator") # Main frame
         self.main_frame = ttk.Frame(self.root, padding="10")
         self.main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
-        self.label = tk.Label(self.main_frame, text="X Automated Lead Generator", font=("Arial Bold", 18),
+        self.label = tk.Label(self.main_frame, text="X Automated Lead Generator", font=("Arial Bold", 18), foreground='black',
                               background="light blue")
         self.label.grid(row=0, column=0, columnspan=2, pady=5)
 
@@ -77,7 +77,7 @@ class GUI:
         self.username_label.grid(row=7, column=0, pady=(20, 0), sticky=tk.W)
 
         # Username save
-        self.save_username_button = ttk.Button(self.main_frame, text="Update Usernames in Queue", command=self.save_usernames, state=tk.DISABLED)
+        self.save_username_button = ttk.Button(self.main_frame, text="Add Usernames to Queue", command=self.save_usernames, state=tk.DISABLED)
         self.save_username_button.grid(row=7, column=1, pady=(20, 0), sticky="e")
 
         # Username variable and trace
@@ -134,7 +134,6 @@ class GUI:
         for row in self.analytics_tree.get_children():
             self.analytics_tree.delete(row)
 
-        print(data)
         # Populate the table with data
         for row in data:
             self.analytics_tree.insert("", tk.END, values=row)
