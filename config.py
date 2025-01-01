@@ -88,3 +88,13 @@ class Config:
             if i != len(self.manual_queue) - 1:
                 saved_queue += ", "
         return saved_queue
+
+    def does_cookies_file_contain_auth_token(self):
+        if os.path.exists(self.CONFIG_FILE):
+            with open(self.CONFIG_FILE, "r", encoding="utf-16") as file:
+                try:
+                    config = json.load(file)
+                except Exception as e:
+                    return False
+                return "auth_token" in config
+        return False

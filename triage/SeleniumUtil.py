@@ -33,6 +33,14 @@ class XActions:
             self._driver = webdriver.Chrome(options=options)
         return self._driver
 
+    def save_cookies_until_auth_token(self):
+        cookies = self.driver.get_cookies()
+        while 'auth_token' not in str(cookies):
+            time.sleep(1)
+            cookies = self.driver.get_cookies()
+        with open('cookies.txt', 'w') as file:
+            json.dump(cookies, file)
+
     def login(self):
         self.driver.get('https://x.com')
         should_use_cookies = True
@@ -70,15 +78,6 @@ class XActions:
             return True
 
         self.driver.get('https://x.com/login')
-        # Log in and save cookies so we don't have to log in again next time and you don't get spammed in login
-        # attempt notifications.
-        time.sleep(60)
-        cookies = self.driver.get_cookies()
-        # Save cookies to a text file in JSON format for ease of use when loading
-        with open('cookies.txt', 'w') as file:
-            json.dump(cookies, file)
-        print("Cookies saved to file.")
-        return 'auth_token' in cookies
 
     def scrape_user_name(self, name):
         self.driver.get(f"https://x.com/{name}/verified_followers")
@@ -142,6 +141,10 @@ class XActions:
 
             print("followers", followers_span_child.text)
             user.followers = convert_following_text_to_int(followers_span_child.text)
+
+            if user.followers < 50 or user.following < 50:
+                return False
+
         except Exception as e:
             print("Could not find or interact with the <span> child:", str(e))
 
@@ -166,12 +169,13 @@ class XActions:
             # Locate the div with role="textbox"
 
             # Example: Enter text into the contenteditable div
-            name = user.username
+            name = '@' + user.username
             try:
-                name = str(user.name.split(' ')[0])
+                name = str(user.name.split(' ')[0]).capitalize()
             except Exception as e:
-                pass
+                print("Weird name:", str(e))
             message = self.config.dm_template.replace("{name}", name).split('\n')
+
             textbox_div = self.driver.find_element(By.CSS_SELECTOR, "div[role='textbox']")
             for m in message:
                 textbox_div = self.driver.find_element(By.CSS_SELECTOR, "div[role='textbox']")

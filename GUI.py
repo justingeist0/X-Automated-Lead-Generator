@@ -1,5 +1,6 @@
 import datetime
 import threading
+import time
 import tkinter as tk
 from tkinter import ttk, messagebox
 
@@ -22,11 +23,11 @@ class GUI:
         self.actions = XActions(self.config)
         self.repo = Repository(self.config)
 
-        self.stop_event = False
+        self.start_dming = False
 
         # Main window
         self.root = tk.Tk()
-        self.root.title("Laplead.com - X Automated Lead Generator") # Main frame
+        self.root.title("Fantasma.dev - X Automated Lead Generator") # Main frame
         self.main_frame = ttk.Frame(self.root, padding="10")
         self.main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
@@ -35,16 +36,15 @@ class GUI:
         self.label.grid(row=0, column=0, columnspan=2, pady=5)
 
         # Status text
-        self.status_label = ttk.Label(self.main_frame, text="Status: Off")
+        self.status_label = ttk.Label(self.main_frame, text="Waiting for log in...")
         self.status_label.grid(row=1, column=0, columnspan=2, pady=5)
 
         # Login button
-        self.login_button = ttk.Button(self.main_frame, text="Power on", command=self.toggle_on)
+        self.login_button = ttk.Button(self.main_frame, text="Start DMing", command=self.toggle_on)
         self.login_button.grid(row=2, column=0, pady=5, columnspan=2)
 
-
         # DM Template Label
-        self.message_label = ttk.Label(self.main_frame, text="DM Message Template, Use {name} to personalize")
+        self.message_label = ttk.Label(self.main_frame, text="DM Message Template, Use {name} to Personalize")
         self.message_label.grid(row=3, column=0, pady=(20, 10), sticky=tk.W)
 
         # DM Template Save Button
@@ -73,7 +73,7 @@ class GUI:
         self.keyword_entry.grid(row=6, column=0, pady=5, columnspan=2, sticky=(tk.W, tk.E))
 
         # Username input label
-        self.username_label = ttk.Label(self.main_frame, text="Enter Usernames, Separated by Commas:")
+        self.username_label = ttk.Label(self.main_frame, text="Add usernames to scrape, separated by commas:")
         self.username_label.grid(row=7, column=0, pady=(20, 0), sticky=tk.W)
 
         # Username save
@@ -101,14 +101,13 @@ class GUI:
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
         self.main_frame.columnconfigure(0, weight=1)
-
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         # Ensure the window renders correctly on macOS
         self.root.after(100, self.ensure_visibility)
-
+        task_thread = threading.Thread(target=self.background_task, daemon=True)
+        task_thread.start()
         self.root.mainloop()
-
 
     def ensure_visibility(self):
         # macOS sometimes needs a slight delay before widgets are displayed
@@ -146,57 +145,51 @@ class GUI:
         self.status_label.update_idletasks()
 
     def toggle_on(self):
-        self.stop_event = False
-        task_thread = threading.Thread(target=self.background_task, daemon=True)
-        task_thread.start()
-        self.login_button.config(text="Power Off", command=self.toggle_off)
-        self.update_status("Please log in. Waiting up to 60 to get started.")
-
-    def toggle_off(self):
-        self.login_button.config(text="Power On", command=self.toggle_on)
-        self.stop_event = True
-        if "Visiting" in self.status_label["text"]:
-            self.update_status("Finishing DM and then quitting...", disable=True)
-        else:
-            self.actions.off()
-            self.update_status("Turning off...", disable=True   )
+        self.start_dming = not self.start_dming
+        self.login_button.config(text="Stop DMing" if self.start_dming else "Start DMing")
+        self.update_status("Finishing up last DMs" if not self.start_dming else "Starting DMing")
+        if self.save_keywords_button["state"] == tk.NORMAL or self.save_username_button["state"] == tk.NORMAL:
+            messagebox.showwarning("Unsaved Changes", "You have unsaved changes.")
 
     def background_task(self):
         try:
-            if not self.actions.login():
-                self.actions.off()
-                self.update_status("Logged out, please log in within 60 seconds.")
-                return
+            self.actions.login()
+            self.actions.save_cookies_until_auth_token()
+            self.update_status("Logged in")
         except Exception as e:
-            if not self.stop_event:
-                self.update_status("Unknown error please take screenshot of this error, send it to me, and restart application." + str(e))
+            self.update_status("Reopening browser. Waiting for log in.")
+            self.actions.off()
+            self.actions.login()
+            self.actions.save_cookies_until_auth_token()
+            self.update_status("Logged in")
+        while True:
+            while self.repo.messages_sent_today < 450 and self.start_dming:
+                try:
+                    next_user_to_scrape = self.repo.get_next_user_to_scrape()
+                    self.update_status(f"Scraping user {next_user_to_scrape}")
 
-        while self.repo.messages_sent_today < 450 and not self.stop_event:
-            next_user_to_scrape = self.repo.get_next_user_to_scrape()
-            self.update_status(f"Scraping user {next_user_to_scrape}")
+                    users_to_dm = self.actions.scrape_user_name(next_user_to_scrape)
+                    self.repo.set_scraped(next_user_to_scrape)
 
-            try:
-                users_to_dm = self.actions.scrape_user_name(next_user_to_scrape)
-                self.repo.set_scraped(next_user_to_scrape)
-            except Exception as e:
-                if not self.stop_event:
-                    self.update_status("Unknown error please take screenshot of this error, send it to me, and restart application." + str(e))
-                users_to_dm = []
+                    for user in users_to_dm:
+                        if self.start_dming:
+                            break
 
-            for user in users_to_dm:
-                if self.stop_event:
-                    break
+                        self.update_status(f"Visiting {user.username} profile")
+                        if self.repo.should_dm_user(user):
+                            can_message = self.actions.dm_user(user)
+                            self.repo.on_user_dm_result(can_message, user)
+                            if can_message:
+                                self.populate_analytics_table()
+                except Exception as e:
+                    self.update_status("Reopening browser.")
+                    self.actions.off()
+                    self.actions.login()
+                    self.actions.save_cookies_until_auth_token()
+                    self.update_status("Logged in")
+            time.sleep(1)
+            self.update_status("Logged in")
 
-                self.update_status(f"Visiting {user.username} profile")
-                if self.repo.should_dm_user(user):
-                    can_message = self.actions.dm_user(user)
-                    self.repo.on_user_dm_result(can_message, user)
-                    self.update_status(f"Sent {self.repo.messages_sent_today} DMs Today")
-                    if can_message:
-                        self.populate_analytics_table()
-
-        self.actions.off()
-        self.update_status("Off")
 
     def on_keyword_change(self, text1, text2, text3):
         keywords = self.keyword_var.get()
@@ -208,7 +201,7 @@ class GUI:
 
     def save_keywords(self):
         keywords = self.keyword_var.get()
-        self.config.save_keywords(keywords)
+        self.config.save_keywords(str(keywords.lower()))
         messagebox.showinfo("Success", "Saved keywords. " + str(self.config.keywords))
         self.save_keywords_button.config(state=tk.DISABLED)
 
