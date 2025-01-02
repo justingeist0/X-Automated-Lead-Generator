@@ -169,12 +169,10 @@ class GUI:
                     self.update_status(f"Scraping user {next_user_to_scrape}")
 
                     users_to_dm = self.actions.scrape_user_name(next_user_to_scrape)
+                    print(users_to_dm)
                     self.repo.set_scraped(next_user_to_scrape)
 
                     for user in users_to_dm:
-                        if self.start_dming:
-                            break
-
                         self.update_status(f"Visiting {user.username} profile")
                         if self.repo.should_dm_user(user):
                             can_message = self.actions.dm_user(user)
@@ -182,6 +180,7 @@ class GUI:
                             if can_message:
                                 self.populate_analytics_table()
                 except Exception as e:
+                    print("exception",e)
                     self.update_status("Reopening browser.")
                     self.actions.off()
                     self.actions.login()
