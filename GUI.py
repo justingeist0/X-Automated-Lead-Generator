@@ -44,7 +44,7 @@ class GUI:
         self.login_button.grid(row=2, column=0, pady=5, columnspan=2)
 
         # DM Template Label
-        self.message_label = ttk.Label(self.main_frame, text="DM Message Template, Use {name} to Personalize")
+        self.message_label = ttk.Label(self.main_frame, text="DM Message Template, Use \"{name}\" to Personalize:")
         self.message_label.grid(row=3, column=0, pady=(20, 10), sticky=tk.W)
 
         # DM Template Save Button
@@ -73,7 +73,7 @@ class GUI:
         self.keyword_entry.grid(row=6, column=0, pady=5, columnspan=2, sticky=(tk.W, tk.E))
 
         # Username input label
-        self.username_label = ttk.Label(self.main_frame, text="Add usernames to scrape, separated by commas:")
+        self.username_label = ttk.Label(self.main_frame, text="(optional) Add Usernames to Scrape, Separated by Commas:")
         self.username_label.grid(row=7, column=0, pady=(20, 0), sticky=tk.W)
 
         # Username save

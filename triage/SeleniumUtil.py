@@ -106,7 +106,7 @@ class XActions:
         scroll_pause_time = 1  # Adjust this for speed
         scroll_height = self.driver.execute_script("return document.body.scrollHeight")
         current_scroll = 0
-        scroll_increment = 100  # Set the scroll amount per increment
+        scroll_increment = 500  # Set the scroll amount per increment
 
         while current_scroll < scroll_height:
             self.driver.execute_script("window.scrollBy(0, arguments[0]);", scroll_increment)
@@ -174,7 +174,7 @@ class XActions:
                 name = str(user.name.split(' ')[0]).capitalize()
             except Exception as e:
                 print("Weird name:", str(e))
-            message = self.config.dm_template.replace("{name}", name).split('\n')
+            message = self.config.dm_template.replace("{name}", name.replace(".", "")).split('\n')
 
             textbox_div = self.driver.find_element(By.CSS_SELECTOR, "div[role='textbox']")
             for m in message:
