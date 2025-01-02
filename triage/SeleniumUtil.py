@@ -201,6 +201,9 @@ class XActions:
             print("Error closing driver:", str(e))
         self._driver = None
 
+    def is_browser_closed(self):
+        return self._driver is None
+
 
 def convert_following_text_to_int(text: str):
     text = text.strip().upper()

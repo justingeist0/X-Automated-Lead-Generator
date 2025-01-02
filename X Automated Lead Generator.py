@@ -3,9 +3,6 @@ import threading
 import time
 import tkinter as tk
 from tkinter import ttk, messagebox
-
-from pygments.styles.dracula import background
-
 from config import Config
 from triage.Repository import Repository
 from triage.SeleniumUtil import XActions
@@ -36,7 +33,7 @@ class GUI:
         self.label.grid(row=0, column=0, columnspan=2, pady=5)
 
         # Status text
-        self.status_label = ttk.Label(self.main_frame, text="Waiting for log in...")
+        self.status_label = ttk.Label(self.main_frame, text="Status: Off")
         self.status_label.grid(row=1, column=0, columnspan=2, pady=5)
 
         # Login button
@@ -117,6 +114,7 @@ class GUI:
 
     def on_closing(self):
         self.root.destroy()
+        self.actions.off()
 
     def populate_analytics_table(self):
         # Get today's date
@@ -152,18 +150,13 @@ class GUI:
             messagebox.showwarning("Unsaved Changes", "You have unsaved changes.")
 
     def background_task(self):
-        try:
-            self.actions.login()
-            self.actions.save_cookies_until_auth_token()
-            self.update_status("Logged in")
-        except Exception as e:
-            self.update_status("Reopening browser. Waiting for log in.")
-            self.actions.off()
-            self.actions.login()
-            self.actions.save_cookies_until_auth_token()
-            self.update_status("Logged in")
         while True:
             while self.repo.messages_sent_today < 450 and self.start_dming:
+                time.sleep(1)
+                if self.actions.is_browser_closed():
+                    self.update_status("Opening chrome browser. Could take a minute. Please log in if you haven't already.")
+                    self.actions.login()
+                    self.actions.save_cookies_until_auth_token()
                 try:
                     next_user_to_scrape = self.repo.get_next_user_to_scrape()
                     self.update_status(f"Scraping user {next_user_to_scrape}")
@@ -173,22 +166,23 @@ class GUI:
                     self.repo.set_scraped(next_user_to_scrape)
 
                     for user in users_to_dm:
+                        if not self.start_dming:
+                            break
+
                         self.update_status(f"Visiting {user.username} profile")
+
                         if self.repo.should_dm_user(user):
                             can_message = self.actions.dm_user(user)
                             self.repo.on_user_dm_result(can_message, user)
                             if can_message:
                                 self.populate_analytics_table()
+
                 except Exception as e:
-                    print("exception",e)
                     self.update_status("Reopening browser.")
                     self.actions.off()
-                    self.actions.login()
-                    self.actions.save_cookies_until_auth_token()
-                    self.update_status("Logged in")
+                    time.sleep(1)
+            self.update_status("Off")
             time.sleep(1)
-            self.update_status("Logged in")
-
 
     def on_keyword_change(self, text1, text2, text3):
         keywords = self.keyword_var.get()
@@ -256,6 +250,5 @@ class GUI:
     def on_message_sort_change(self):
         sort_by = self.message_sort_var.get()
         self.populate_messages_table()
-
 
 GUI()

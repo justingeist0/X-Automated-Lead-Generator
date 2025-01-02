@@ -1,3 +1,4 @@
+import csv
 import datetime
 import sqlite3
 from datetime import date
@@ -13,6 +14,7 @@ class Repository:
         self.db_path = "./prospects.db"
         self.create_user_table()
         self.config = config
+        self.export_users_with_dms_sent_one()
 
     def create_user_table(self):
         conn = sqlite3.connect(self.db_path)
@@ -36,6 +38,34 @@ class Repository:
         c.execute('CREATE INDEX IF NOT EXISTS idx_username ON users(username)')
         conn.commit()
         conn.close()
+
+    def export_users_with_dms_sent_one(self, output_csv_path="list.csv"):
+        # Connect to the database
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+
+        # Query to fetch all rows where total_dms_sent = 1
+        c.execute('SELECT * FROM users WHERE total_dms_sent = 1')
+        rows = c.fetchall()
+        print(rows)
+
+        # Fetch the column names from the table
+        column_names = [description[0] for description in c.description]
+
+        # Write the result to a CSV file
+        with open(output_csv_path, mode='w', newline='', encoding='utf-8') as csv_file:
+            writer = csv.writer(csv_file)
+
+            # Write the header (column names)
+            writer.writerow(column_names)
+
+            # Write the data rows
+            writer.writerows(rows)
+
+        # Close the database connection
+        conn.close()
+
+        print(f"Exported all users with total_dms_sent = 1 to {output_csv_path}")
 
     def get_user(self, username):
         conn = sqlite3.connect(self.db_path)
