@@ -3,7 +3,7 @@ import threading
 import time
 import tkinter as tk
 from tkinter import ttk, messagebox
-from config import Config
+from config import Config, get_executable_dir
 from triage.Repository import Repository
 from triage.SeleniumUtil import XActions
 
@@ -153,11 +153,11 @@ class GUI:
         while True:
             while self.repo.messages_sent_today < 450 and self.start_dming:
                 time.sleep(1)
-                if self.actions.is_browser_closed():
-                    self.update_status("Opening chrome browser. Could take a minute. Please log in if you haven't already.")
-                    self.actions.login()
-                    self.actions.save_cookies_until_auth_token()
                 try:
+                    if self.actions.is_browser_closed():
+                        self.update_status("Opening web browser. Could take a minute. Please log in if you haven't already.")
+                        self.actions.login()
+                        self.actions.save_cookies_until_auth_token()
                     next_user_to_scrape = self.repo.get_next_user_to_scrape()
                     self.update_status(f"Scraping user {next_user_to_scrape}")
 
@@ -252,3 +252,5 @@ class GUI:
         self.populate_messages_table()
 
 GUI()
+
+

@@ -1,11 +1,20 @@
 import json
 import os
+import pathlib
+import sys
+
+
+def get_executable_dir():
+    if getattr(sys, 'frozen', False):  # Check if running as a bundled executable
+        return pathlib.Path(sys.executable).parent
+    else:
+        return pathlib.Path(__file__).parent.resolve()
 
 
 class Config:
 
     def __init__(self):
-        self.CONFIG_FILE = "config.json"
+        self.CONFIG_FILE = get_executable_dir() / "config.json"
         self.keywords = self.load_keywords()
         self.dm_template = self.load_dm_template()
         self.manual_queue = []

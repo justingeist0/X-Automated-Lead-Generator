@@ -4,8 +4,7 @@ import time
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 
-from config import Config
-from triage.DMsToSend import getDMMessageSent
+from config import Config, get_executable_dir
 from triage.User import User
 import json
 from datetime import datetime
@@ -27,9 +26,7 @@ class XActions:
     @property
     def driver(self):
         if self._driver is None:
-            print("Initializing the driver...")
-            options = webdriver.ChromeOptions()
-            options.add_argument('--disable-blink-features=AutomationControlled')
+            options = webdriver.FirefoxOptions()
             self._driver = webdriver.Chrome(options=options)
         return self._driver
 
@@ -38,7 +35,7 @@ class XActions:
         while 'auth_token' not in str(cookies):
             time.sleep(1)
             cookies = self.driver.get_cookies()
-        with open('cookies.txt', 'w') as file:
+        with open(get_executable_dir() / 'cookies.txt', 'w') as file:
             json.dump(cookies, file)
 
     def login(self):
@@ -46,7 +43,7 @@ class XActions:
         should_use_cookies = True
         current_time = datetime.now().timestamp()
         try:
-            with open('cookies.txt', 'r') as file:
+            with open(get_executable_dir() / 'cookies.txt', 'r') as file:
                 cookies = json.load(file)
                 for cookie in cookies:
                     if 'expiry' in cookie and 'auth_token' in cookie:
@@ -67,7 +64,7 @@ class XActions:
             self.driver.delete_all_cookies()
 
             # Load cookies from file
-            with open('cookies.txt', 'r') as file:
+            with open(get_executable_dir() / 'cookies.txt', 'r') as file:
                 cookies = json.load(file)
 
             # Add each cookie back to the browser
@@ -196,7 +193,8 @@ class XActions:
 
     def off(self):
         try:
-            self.driver.close()
+            if self._driver is not None:
+                self.driver.close()
         except Exception as e:
             print("Error closing driver:", str(e))
         self._driver = None
@@ -217,7 +215,7 @@ def convert_following_text_to_int(text: str):
 
 
 def find_x_path(driver, xpath):
-    for i in range(0, 5):
+    for i in range(0, 60):
         try:
             element = driver.find_element(By.XPATH, xpath)
             return element

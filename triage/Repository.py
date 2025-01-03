@@ -3,7 +3,7 @@ import datetime
 import sqlite3
 from datetime import date
 
-from config import Config
+from config import Config, get_executable_dir
 from triage.User import User
 
 
@@ -11,7 +11,7 @@ class Repository:
 
     def __init__(self, config: Config):
         self.messages_sent_today = 0
-        self.db_path = "./prospects.db"
+        self.db_path = get_executable_dir() / "prospects.db"
         self.create_user_table()
         self.config = config
         self.export_users_with_dms_sent_one()
@@ -39,7 +39,7 @@ class Repository:
         conn.commit()
         conn.close()
 
-    def export_users_with_dms_sent_one(self, output_csv_path="list.csv"):
+    def export_users_with_dms_sent_one(self, output_csv_path=get_executable_dir() / "list.csv"):
         # Connect to the database
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
