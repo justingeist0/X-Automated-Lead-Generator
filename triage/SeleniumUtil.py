@@ -26,7 +26,7 @@ class XActions:
     @property
     def driver(self):
         if self._driver is None:
-            options = webdriver.FirefoxOptions()
+            options = webdriver.ChromeOptions()
             self._driver = webdriver.Chrome(options=options)
         return self._driver
 
@@ -56,7 +56,7 @@ class XActions:
                             break
         except Exception as e:
             # Just means we don't have a cookies.txt file yet.
-            print("No existing cookies file... Expect to receive an Unexpected log in notification", e)
+            print("No existing cookies file... Please log in.", e)
             should_use_cookies = False
             pass
 
@@ -155,7 +155,7 @@ class XActions:
         try:
             message_button = self.driver.find_elements(By.CSS_SELECTOR, "button[aria-label='Message'][role='button']")[0]
             print("found it")
-            message_button.click()
+            return True
         except Exception as e:
             print("Can not DM user")
             return False

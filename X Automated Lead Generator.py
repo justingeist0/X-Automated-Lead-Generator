@@ -1,8 +1,12 @@
+import csv
 import datetime
 import threading
 import time
 import tkinter as tk
+from pathlib import Path
 from tkinter import ttk, messagebox
+from xmlrpc.client import DateTime
+
 from config import Config, get_executable_dir
 from triage.Repository import Repository
 from triage.SeleniumUtil import XActions
@@ -19,16 +23,17 @@ class GUI:
         self.config = Config()
         self.actions = XActions(self.config)
         self.repo = Repository(self.config)
+        self.users_to_add = []
 
         self.start_dming = False
 
         # Main window
         self.root = tk.Tk()
-        self.root.title("Fantasma.dev - X Automated Lead Generator") # Main frame
+        self.root.title("Fantasma.dev - X Open DM Finder")
         self.main_frame = ttk.Frame(self.root, padding="10")
         self.main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
-        self.label = tk.Label(self.main_frame, text="X Automated Lead Generator", font=("Arial Bold", 18), foreground='black',
+        self.label = tk.Label(self.main_frame, text="X Open DM Finder", font=("Arial Bold", 18), foreground='black',
                               background="light blue")
         self.label.grid(row=0, column=0, columnspan=2, pady=5)
 
@@ -37,23 +42,8 @@ class GUI:
         self.status_label.grid(row=1, column=0, columnspan=2, pady=5)
 
         # Login button
-        self.login_button = ttk.Button(self.main_frame, text="Start DMing", command=self.toggle_on)
+        self.login_button = ttk.Button(self.main_frame, text="Start Searching", command=self.toggle_on)
         self.login_button.grid(row=2, column=0, pady=5, columnspan=2)
-
-        # DM Template Label
-        self.message_label = ttk.Label(self.main_frame, text="DM Message Template, Use \"{name}\" to Personalize:")
-        self.message_label.grid(row=3, column=0, pady=(20, 10), sticky=tk.W)
-
-        # DM Template Save Button
-        self.save_dm_button = ttk.Button(self.main_frame, text="Save Template", command=self.save_dm_template, state=tk.DISABLED)
-        self.save_dm_button.grid(row=3, column=1, pady=(20, 10), sticky="e")
-
-        # DM Template Text Box
-        self.dm_template_input = tk.Text(self.main_frame, height=6, width=50, wrap="word", font=("Arial", 12))
-        self.dm_template_input.grid(row=4, column=0, pady=(0, 5), columnspan=2, sticky=(tk.W, tk.E))
-        self.dm_template_input.insert("1.0", self.config.dm_template)
-        self.dm_template_input.edit_modified(False)
-        self.dm_template_input.bind("<<Modified>>", self.on_dm_change)
 
         # Keyword input label
         self.keyword_label = ttk.Label(self.main_frame, text="Enter Keywords, Separated by Commas:")
@@ -84,10 +74,10 @@ class GUI:
         self.username_entry.grid(row=8, column=0, pady=5, columnspan=2, sticky=(tk.W, tk.E))
 
         # Analytics table
-        self.analytics_frame = ttk.LabelFrame(self.main_frame, text="Total Daily DMs Sent")
+        self.analytics_frame = ttk.LabelFrame(self.main_frame, text="Currently Collected Users:")
         self.analytics_frame.grid(row=9, column=0, pady=10, sticky=tk.W+tk.E, columnspan=2)
 
-        analytics_columns = ("Date", "DMs Sent")
+        analytics_columns = ("Display Name", "Username", "Followers", "Following", "Bio", "Source")
         self.analytics_tree = ttk.Treeview(self.analytics_frame, columns=analytics_columns, show='headings', height=3)
         for col in analytics_columns:
             self.analytics_tree.heading(col, text=col)
@@ -117,24 +107,21 @@ class GUI:
         self.actions.off()
 
     def populate_analytics_table(self):
-        # Get today's date
-        today = datetime.date.today()
-        # Calculate the date 100 days ago
-        start_date = today - datetime.timedelta(days=100)
-
-        # Query the repository for analytics data
-        # Assuming the repository provides a method `get_analytics_data(start_date, end_date)`
-        data = self.repo.get_analytics_data(start_date, today)
-
-        # Expected format of `data`: list of tuples [("Date", dms_sent, responded, interested, not_interested, sales)]
         # Clear any existing rows in the analytics_tree
         for row in self.analytics_tree.get_children():
             self.analytics_tree.delete(row)
 
         # Populate the table with data
-        for row in data:
-            self.analytics_tree.insert("", tk.END, values=row)
-            self.analytics_tree.pack(expand=True, fill='both')
+        for user in self.users_to_add:
+            self.analytics_tree.insert("", tk.END, values=(
+                user.name,
+                user.username,
+                user.followers,
+                user.following,
+                user.bio,
+                user.sourced_from,
+            ))
+        self.analytics_tree.pack(expand=True, fill='both')
 
     def update_status(self, new_status, disable=False):
         self.status_label.config(text=f"Status: {new_status}")
@@ -144,10 +131,46 @@ class GUI:
 
     def toggle_on(self):
         self.start_dming = not self.start_dming
-        self.login_button.config(text="Stop DMing" if self.start_dming else "Start DMing")
-        self.update_status("Finishing up last DMs" if not self.start_dming else "Starting DMing")
+        self.login_button.config(text="Save Data & Stop Searching" if self.start_dming else "Start Searching")
+        self.update_status("Finishing up" if not self.start_dming else "Starting")
         if self.save_keywords_button["state"] == tk.NORMAL or self.save_username_button["state"] == tk.NORMAL:
             messagebox.showwarning("Unsaved Changes", "You have unsaved changes.")
+        if not self.start_dming:
+            self.export_to_csv()
+
+    def export_to_csv(self):
+        print("Exporting to csv...")
+        # Generate a file path with the current timestamp (to seconds)
+        timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        path = Path(get_executable_dir()) / f"{timestamp}.csv"
+
+        # Define the header and prepare the data for writing
+        header = ['Link', 'Name', 'Username', 'Bio', 'Followers', 'Following', 'Verified', 'Sourced From']
+
+        # Retrieve the users to add
+        users_data = [
+            {
+                "Link": f"https://x.com/{user.username}",
+                'Name': user.name,
+                'Username': user.username,
+                'Bio': user.bio,
+                'Followers': user.followers,
+                'Following': user.following,
+                'Verified': "Yes" if user.is_verified else "No",
+                'Sourced From': user.sourced_from
+            }
+            for user in self.users_to_add
+        ]
+
+        # Write to the CSV file
+        with open(path, mode='w', newline='', encoding='utf-8') as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=header)
+            writer.writeheader()
+            writer.writerows(users_data)
+
+        # Update the status with the saved file path
+        self.update_status("Saved " + str(path))
+
 
     def background_task(self):
         while True:
@@ -162,7 +185,6 @@ class GUI:
                     self.update_status(f"Scraping user {next_user_to_scrape}")
 
                     users_to_dm = self.actions.scrape_user_name(next_user_to_scrape)
-                    print(users_to_dm)
                     self.repo.set_scraped(next_user_to_scrape)
 
                     for user in users_to_dm:
@@ -175,9 +197,10 @@ class GUI:
                             can_message = self.actions.dm_user(user)
                             self.repo.on_user_dm_result(can_message, user)
                             if can_message:
+                                self.users_to_add.append(user)
                                 self.populate_analytics_table()
-
                 except Exception as e:
+                    print("Error ", e)
                     self.update_status("Reopening browser.")
                     self.actions.off()
                     time.sleep(1)
@@ -252,5 +275,3 @@ class GUI:
         self.populate_messages_table()
 
 GUI()
-
-

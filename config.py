@@ -14,6 +14,7 @@ def get_executable_dir():
 class Config:
 
     def __init__(self):
+        print("dir ", get_executable_dir())
         self.CONFIG_FILE = get_executable_dir() / "config.json"
         self.keywords = self.load_keywords()
         self.dm_template = self.load_dm_template()
