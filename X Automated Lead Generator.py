@@ -33,7 +33,7 @@ class GUI:
         self.label.grid(row=0, column=0, columnspan=2, pady=5)
 
         # Status text
-        self.status_label = ttk.Label(self.main_frame, text="Status: Off")
+        self.status_label = ttk.Label(self.main_frame, text="Status: Off, click \"Start DMing\" to login and start DMing.")
         self.status_label.grid(row=1, column=0, columnspan=2, pady=5)
 
         # Login button
@@ -181,7 +181,7 @@ class GUI:
                     self.update_status("Reopening browser.")
                     self.actions.off()
                     time.sleep(1)
-            self.update_status("Off")
+            self.update_status("Off, click \"Start DMing\" to login and start DMing.")
             time.sleep(1)
 
     def on_keyword_change(self, text1, text2, text3):

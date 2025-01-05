@@ -26,7 +26,7 @@ class XActions:
     @property
     def driver(self):
         if self._driver is None:
-            options = webdriver.FirefoxOptions()
+            options = webdriver.ChromeOptions()
             self._driver = webdriver.Chrome(options=options)
         return self._driver
 
@@ -168,7 +168,15 @@ class XActions:
             # Example: Enter text into the contenteditable div
             name = '@' + user.username
             try:
-                name = str(user.name.split(' ')[0]).capitalize()
+                split_name = user.name.split(' ')
+                name = str(split_name[0]).capitalize()
+                if name == "The":
+                    name = str(split_name[1]).capitalize()
+                split_name = user.name.split('.')
+                if len(split_name) > 1:
+                    name = str(split_name[0]).capitalize()
+                    if name == "The":
+                        name = str(split_name[1]).capitalize()
             except Exception as e:
                 print("Weird name:", str(e))
             message = self.config.dm_template.replace("{name}", name.replace(".", "")).split('\n')
