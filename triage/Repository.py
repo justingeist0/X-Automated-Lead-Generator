@@ -174,6 +174,11 @@ class Repository:
         else:
             self.update_user(user)
 
+        for excluded_keyword in self.config.exclude_keywords:
+            if user.check_for_keyword(excluded_keyword):
+                print("Not DMing because has keyword, ", excluded_keyword, user.username)
+                return False
+
         # See if has been DMed before
         if user.last_dm_sent is not None:
             print("DM Sent already or can't sent DM", user)

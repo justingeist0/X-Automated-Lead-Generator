@@ -139,8 +139,16 @@ class XActions:
             print("followers", followers_span_child.text)
             user.followers = convert_following_text_to_int(followers_span_child.text)
 
-            if user.followers < 50 or user.following < 50:
+            if user.followers < 50 or user.following < 50 or user.followers > 5000:
                 return False
+
+            # Locate the desired <div> element
+            profile_header_items = self.driver.find_element(By.CSS_SELECTOR,"div[data-testid*='UserProfileHeader_Items']")
+            user.bio += profile_header_items.text
+            for excluded_keyword in self.config.exclude_keywords:
+                if user.check_for_keyword(excluded_keyword):
+                    print("Not DMing because has keyword, ", excluded_keyword, user.username)
+                    return False
 
         except Exception as e:
             print("Could not find or interact with the <span> child:", str(e))

@@ -70,17 +70,17 @@ class GUI:
         self.keyword_entry.grid(row=6, column=0, pady=5, columnspan=2, sticky=(tk.W, tk.E))
 
         # Username input label
-        self.username_label = ttk.Label(self.main_frame, text="(optional) Add Usernames to Scrape, Separated by Commas:")
-        self.username_label.grid(row=7, column=0, pady=(20, 0), sticky=tk.W)
+        self.username_label = ttk.Label(self.main_frame, text="Enter Excluded Keywords. Will Not DM Users with Keyword(s):")
+        self.username_label.grid(row=7, column=0, pady=(4, 0), sticky=tk.W)
 
         # Username save
-        self.save_username_button = ttk.Button(self.main_frame, text="Add Usernames to Queue", command=self.save_usernames, state=tk.DISABLED)
-        self.save_username_button.grid(row=7, column=1, pady=(20, 0), sticky="e")
+        # self.save_username_button = ttk.Button(self.main_frame, text="Add Usernames to Queue", command=self.save_usernames, state=tk.DISABLED)
+        # self.save_username_button.grid(row=7, column=1, pady=(20, 0), sticky="e")
 
         # Username variable and trace
-        self.username_var = tk.StringVar(value=self.config.manual_queue_str())
-        self.username_var.trace_add("write", self.on_username_keyword_change)
-        self.username_entry = ttk.Entry(self.main_frame, textvariable=self.username_var, width=40)
+        self.exclude_keywords = tk.StringVar(value=self.config.exclude_keywords_str())
+        self.exclude_keywords.trace_add("write", self.on_keyword_change)
+        self.username_entry = ttk.Entry(self.main_frame, textvariable=self.exclude_keywords, width=40)
         self.username_entry.grid(row=8, column=0, pady=5, columnspan=2, sticky=(tk.W, tk.E))
 
         # Analytics table
@@ -146,8 +146,6 @@ class GUI:
         self.start_dming = not self.start_dming
         self.login_button.config(text="Stop DMing" if self.start_dming else "Start DMing")
         self.update_status("Finishing up last DMs" if not self.start_dming else "Starting DMing")
-        if self.save_keywords_button["state"] == tk.NORMAL or self.save_username_button["state"] == tk.NORMAL:
-            messagebox.showwarning("Unsaved Changes", "You have unsaved changes.")
 
     def background_task(self):
         while True:
@@ -186,23 +184,22 @@ class GUI:
 
     def on_keyword_change(self, text1, text2, text3):
         keywords = self.keyword_var.get()
-        self.save_keywords_button.config(state=tk.NORMAL if keywords != self.config.keywords_str() else tk.DISABLED)
-
-    def on_username_keyword_change(self, text1, text2, text3):
-        username = self.username_var.get()
-        self.save_username_button.config(state=tk.NORMAL if username != self.config.manual_queue_str() else tk.DISABLED)
+        excluded_keywords = self.exclude_keywords.get()
+        print(keywords,excluded_keywords, self.config.keywords_str(), self.config.exclude_keywords_str())
+        self.save_keywords_button.config(state=tk.NORMAL if keywords != self.config.keywords_str() or excluded_keywords != self.config.exclude_keywords_str() else tk.DISABLED)
 
     def save_keywords(self):
         keywords = self.keyword_var.get()
-        self.config.save_keywords(str(keywords.lower()))
-        messagebox.showinfo("Success", "Saved keywords. " + str(self.config.keywords))
+        exclude_keywords = self.exclude_keywords.get()
+        self.config.save_keywords(str(keywords.lower()), str(exclude_keywords.lower()))
+        messagebox.showinfo("Success", "Will only DM users who have one of these keywords in their username, display name, or bio:\n" + str(self.config.keywords) + "\nAnd has none of these keywords:\n" + str(self.config.exclude_keywords))
         self.save_keywords_button.config(state=tk.DISABLED)
 
-    def save_usernames(self):
-        username = self.username_var.get()
-        self.config.save_manual_queue(username)
-        messagebox.showinfo("Success", "Saved usernames to queue. " + str(self.config.manual_queue))
-        self.save_username_button.config(state=tk.DISABLED)
+    # def save_usernames(self):
+    #     username = self.exclude_keywords.get()
+    #     self.config.save_manual_queue(username)
+    #     messagebox.showinfo("Success", "Saved usernames to queue. " + str(self.config.manual_queue))
+    #     self.save_username_button.config(state=tk.DISABLED)
 
     def on_dm_change(self, event=None):
         """
