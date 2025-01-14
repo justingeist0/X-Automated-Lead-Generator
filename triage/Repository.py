@@ -14,7 +14,6 @@ class Repository:
         self.db_path = get_executable_dir() / "prospects.db"
         self.create_user_table()
         self.config = config
-        self.export_users_with_dms_sent_one()
 
     def create_user_table(self):
         conn = sqlite3.connect(self.db_path)
