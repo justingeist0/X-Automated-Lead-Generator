@@ -5,6 +5,7 @@ from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 
 from config import Config, get_executable_dir
+from triage.LocalConfig import is_on_mac
 from triage.User import User
 import json
 from datetime import datetime
@@ -26,7 +27,10 @@ class XActions:
     @property
     def driver(self):
         if self._driver is None:
-            options = webdriver.ChromeOptions()
+            if is_on_mac():
+                options = webdriver.FirefoxOptions()
+            else:
+                options = webdriver.ChromeOptions()
             self._driver = webdriver.Chrome(options=options)
         return self._driver
 
